@@ -2,9 +2,11 @@ package cn.airframework.core.util;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.BiConsumer;
@@ -53,6 +55,35 @@ public interface MultiMap<K, V> {
      */
     static <K, V> MultiMap<K, V> linkedHashMultimap() {
         return new StandardMultiMap<>(new LinkedHashMap<>(), LinkedHashSet::new);
+    }
+
+    /**
+     * 获取一个空的 {@link MultiMap} 实例。
+     *
+     * @return 一个空的 {@link MultiMap} 实例
+     */
+    @SuppressWarnings("unchecked")
+    static <K, V> MultiMap<K, V> empty() {
+        return EmptyMultiMap.INSTANCE;
+    }
+
+    /**
+     * 拷贝一个不可变集合
+     *
+     * @param multiMap 映射
+     * @return 一个新的 {@link MultiMap} 实例
+     */
+    static <K, V> MultiMap<K, V> copyOf(MultiMap<K, V> multiMap) {
+        Map<K, Collection<V>> rawMap = multiMap.asMap();
+        Map<K, Collection<V>> map = new HashMap<>(rawMap.size());
+        rawMap.forEach((k, vs) -> {
+            if (vs instanceof Set<V> set) {
+                map.put(k, Set.copyOf(set));
+            } else {
+                map.put(k, List.copyOf(vs));
+            }
+        });
+        return new StandardMultiMap<>(Map.copyOf(map), Collections::emptyList);
     }
 
     /**
