@@ -4,11 +4,8 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
+import java.lang.reflect.Array;
+import java.util.*;
 
 /**
  * {@link Object}工具类
@@ -100,5 +97,91 @@ public class ObjectUtils {
      */
     public static boolean isNotEmpty(Object target) {
         return !isEmpty(target);
+    }
+
+    /**
+     * 针对给定的 object 返回对应的 {@code Object.hashcode}, 如果 object 是数组类型则使用 {@code Arrays.hashcode}, 如果 object 是 {@code null} 返回 0
+     *
+     * @see Object#hashCode()
+     * @see Array#hashCode()
+     * @return hashcode
+     */
+    public static Integer nullSafeHashCode(Object object) {
+        if (object == null) {
+            return 0;
+        }
+        if (object.getClass().isArray()) {
+            return switch (object) {
+                case Object[] objects : yield Arrays.hashCode(objects);
+                case boolean[] booleans : yield Arrays.hashCode(booleans);
+                case byte[] bytes : yield Arrays.hashCode(bytes);
+                case char[] chars : yield Arrays.hashCode(chars);
+                case short[] shorts : yield Arrays.hashCode(shorts);
+                case int[] ints : yield Arrays.hashCode(ints);
+                case long[] longs : yield Arrays.hashCode(longs);
+                case double[] doubles : yield Arrays.hashCode(doubles);
+                default: yield object.hashCode();
+            };
+        }
+        return object.hashCode();
+    }
+
+    /**
+     * 比对两个对象是否相等, 优先采用 {@code Object.equals}, 如果是数组类型则采用 {@code arrayEquals} 判断
+     *
+     * @see ObjectUtils#arrayEquals(Object, Object)
+     * @return boolean
+     */
+    public static boolean nullSafeEquals(Object o1, Object o2) {
+        if (o1 == o2) {
+            return true;
+        }
+        if (o1 == null || o2 == null) {
+            return false;
+        }
+        if (o1.equals(o2)) {
+            return true;
+        }
+        if (o1.getClass().isArray() && o2.getClass().isArray()) {
+            return arrayEquals(o1, o2);
+        }
+        return false;
+    }
+
+    /**
+     * 判断两个数组类型是否相等, 根据其对应的类型采用 {code Arrays.equals} 进行比对
+     * 
+     * @see Arrays#equals
+     * @return boolean
+     */
+    public static boolean arrayEquals(Object o1, Object o2) {
+        if (o1 instanceof Object[] objects1 && o2 instanceof Object[] objects2) {
+            return Arrays.equals(objects1, objects2);
+        }
+        if (o1 instanceof boolean[] booleans1 && o2 instanceof boolean[] booleans2) {
+            return Arrays.equals(booleans1, booleans2);
+        }
+        if (o1 instanceof byte[] bytes1 && o2 instanceof byte[] bytes2) {
+            return Arrays.equals(bytes1, bytes2);
+        }
+        if (o1 instanceof char[] chars1 && o2 instanceof char[] chars2) {
+            return Arrays.equals(chars1, chars2);
+        }
+        if (o1 instanceof double[] doubles1 && o2 instanceof double[] doubles2) {
+            return Arrays.equals(doubles1, doubles2);
+        }
+        if (o1 instanceof float[] floats1 && o2 instanceof float[] floats2) {
+            return Arrays.equals(floats1, floats2);
+        }
+        if (o1 instanceof int[] ints1 && o2 instanceof int[] ints2) {
+            return Arrays.equals(ints1, ints2);
+        }
+        if (o1 instanceof long[] longs1 && o2 instanceof long[] longs2) {
+            return Arrays.equals(longs1, longs2);
+        }
+        if (o1 instanceof short[] shorts1 && o2 instanceof short[] shorts2) {
+            return Arrays.equals(shorts1, shorts2);
+        }
+        return false;
     }
 }
