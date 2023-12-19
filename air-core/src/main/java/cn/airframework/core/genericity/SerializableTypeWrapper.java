@@ -179,17 +179,29 @@ public final class SerializableTypeWrapper {
 
     static class MethodParameterTypeProvider implements TypeProvider {
 
-        private Method method;
-        private int index;
+        private final String methodName;
+        private final int index;
+        private final Class<?>[] parameterTypes;
+        private final Class<?> declaringClass;
+        private MethodParameter methodParameter;
+
+
+        public MethodParameterTypeProvider(MethodParameter methodParameter) {
+            this.methodName = methodParameter.getMethod() != null ? methodParameter.getMethod().getName() : null;
+            this.index = methodParameter.getParameterIndex();
+            this.parameterTypes = methodParameter.getExecutable().getParameterTypes();
+            this.declaringClass = methodParameter.getDeclaringlClass();
+            this.methodParameter = methodParameter;
+        }
 
         @Override
         public Type getType() {
-            return null;
+            return this.methodParameter.getGenericParameterType();
         }
 
         @Override
         public Object getSource() {
-            return TypeProvider.super.getSource();
+            return this.methodParameter;
         }
     }
 }
