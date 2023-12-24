@@ -7,6 +7,8 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Executable;
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * @author kairong.liu
@@ -19,6 +21,8 @@ public class MethodParameter {
     private final Executable executable;
     private final int parameterIndex;
     private Type parameterType;
+    private volatile int nestingLevel;
+    private volatile Map<Integer, Integer> typeIndexesPerLevel;
 
     public MethodParameter(Method method, int parameterIndex) {
         Asserts.isNotNull(method, "method must not null");
@@ -26,11 +30,24 @@ public class MethodParameter {
         this.parameterIndex = validParameterIndex(method, parameterIndex);
     }
 
+    public MethodParameter(MethodParameter original) {
+        this.executable = original.executable;
+        this.parameterIndex = original.parameterIndex;
+        this.nestingLevel = original.nestingLevel;
+        this.typeIndexesPerLevel = original.typeIndexesPerLevel;
+        this.parameterType = original.parameterType;
+    }
 
-    public MethodParameter(Constructor<?> constructor, int parameterIndex) {
+
+    public MethodParameter(Constructor<?> constructor, int parameterIndex, int nestingLevel) {
         Asserts.isNotNull(constructor, "construct must not null");
         this.executable = constructor;
         this.parameterIndex = validParameterIndex(constructor, parameterIndex);
+        this.nestingLevel = nestingLevel;
+    }
+
+    public MethodParameter(Constructor<?> constructor, int parameterIndex) {
+        this(constructor, parameterIndex, 1);
     }
 
 
@@ -40,6 +57,31 @@ public class MethodParameter {
 
     public Constructor<?> getConstruct() {
         return executable instanceof Constructor<?> constructor ? constructor : null;
+    }
+
+    private MethodParameter nested(int nestingLevel, Integer typeIndex) {
+        MethodParameter copy = clone();
+        copy.nestingLevel = nestingLevel;
+        if (this.typeIndexesPerLevel != null) {
+            copy.typeIndexesPerLevel = new HashMap<>(this.typeIndexesPerLevel);
+        }
+        if (typeIndex != null) {
+            copy.getTypeIndexesPerLevel().put(copy.nestingLevel, typeIndex);
+        }
+        copy.parameterType = null;
+        return copy;
+    }
+
+    public Map<Integer, Integer> getPreNestingLevel() {
+        if (this.typeIndexesPerLevel == null) {
+            this.typeIndexesPerLevel = new HashMap<>(4);
+        }
+        return this.typeIndexesPerLevel;
+    }
+
+    @Override
+    public MethodParameter clone() {
+        return new MethodParameter(this);
     }
 
     public Class<?> getDeclaringlClass() {
@@ -59,6 +101,10 @@ public class MethodParameter {
             this.parameterType = parameterType;
         }
         return parameterType;
+    }
+
+    public Class<?> getContainingClass() {
+        return executable.getDeclaringClass();
     }
 
     private static int validParameterIndex(Executable executable, int parameterIndex) {
