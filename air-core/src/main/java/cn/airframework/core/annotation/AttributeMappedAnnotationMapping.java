@@ -348,33 +348,49 @@ class AttributeMappedAnnotationMapping {
     private MultiMap<Method, Method> resolveAliasedBy(Class<? extends Annotation> annotationType) {
         MultiMap<Method, Method> methods = MultiMap.arrayListMultimap();
         forEachAttribute((idx, attribute) -> {
-            Alias alias = attribute.getAnnotation(Alias.class);
-            if (Objects.isNull(alias)) {
-                return;
+            Method targetAttr = resolveAliasedByAttribute(annotationType, attribute);
+            if (Objects.nonNull(targetAttr)) {
+                methods.put(targetAttr, attribute);
             }
-            // 若不指定注解类型，则默认注解类型即为当前类型
-            Class<?> targetAnnoType = Objects.equals(alias.annotation(), Annotation.class) ? annotationType : alias.annotation();
-            // 若不指定属性名称，则默认为当前属性名称
-            String targetAttrName = determineAttributeName(attribute, alias);
-            Method targetAttr = ReflectUtils.getDeclaredMethod(targetAnnoType, targetAttrName);
-            // 别名属性必须存在
-            Asserts.isNotNull(
-                targetAttr, "Cannot find method [{}] from annotation type [{}]",
-                targetAttrName, targetAnnoType
-            );
-            // 别名属性不能是自己本身
-            Asserts.isFalse(
-                Objects.equals(attribute, targetAttr), "Attribute [{}] from annotation type [{}] cannot be an alias for itself",
-                attribute.getName(), annotationType
-            );
-            // 互为别名的属性的类型必须一致
-            Asserts.isTrue(
-                attribute.getReturnType().isAssignableFrom(targetAttr.getReturnType()), "Attribute [{}] from annotation type [{}] is not assignable to alias attribute [{}] from annotation type [{}]",
-                attribute.getName(), annotationType, targetAttrName, targetAnnoType
-            );
-            methods.put(targetAttr, attribute);
         });
         return MultiMap.copyOf(methods);
+    }
+
+    /**
+     * 解析当前属性对应的别名属性
+     *
+     * @param annotationType 当前注解类型
+     * @param attribute 属性
+     * @return 别名属性
+     */
+    @Nullable
+    protected Method resolveAliasedByAttribute(
+        Class<? extends Annotation> annotationType, Method attribute) {
+        Alias alias = attribute.getAnnotation(Alias.class);
+        if (Objects.isNull(alias)) {
+            return null;
+        }
+        // 若不指定注解类型，则默认注解类型即为当前类型
+        Class<?> targetAnnoType = Objects.equals(alias.annotation(), Annotation.class) ? annotationType : alias.annotation();
+        // 若不指定属性名称，则默认为当前属性名称
+        String targetAttrName = determineAttributeName(attribute, alias);
+        Method targetAttr = ReflectUtils.getDeclaredMethod(targetAnnoType, targetAttrName);
+        // 别名属性必须存在
+        Asserts.isNotNull(
+            targetAttr, "Cannot find method [{}] from annotation type [{}]",
+            targetAttrName, targetAnnoType
+        );
+        // 别名属性不能是自己本身
+        Asserts.isFalse(
+            Objects.equals(attribute, targetAttr), "Attribute [{}] from annotation type [{}] cannot be an alias for itself",
+            attribute.getName(), annotationType
+        );
+        // 互为别名的属性的类型必须一致
+        Asserts.isTrue(
+            attribute.getReturnType().isAssignableFrom(targetAttr.getReturnType()), "Attribute [{}] from annotation type [{}] is not assignable to alias attribute [{}] from annotation type [{}]",
+            attribute.getName(), annotationType, targetAttrName, targetAnnoType
+        );
+        return targetAttr;
     }
 
     @NonNull

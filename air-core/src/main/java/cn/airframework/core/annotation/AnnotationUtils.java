@@ -1,7 +1,6 @@
 package cn.airframework.core.annotation;
 
 import cn.airframework.core.util.ArrayUtils;
-import cn.airframework.core.util.Asserts;
 import cn.airframework.core.util.ClassUtils;
 import cn.airframework.core.util.ReflectUtils;
 import lombok.AccessLevel;
@@ -13,7 +12,6 @@ import java.lang.annotation.Annotation;
 import java.lang.annotation.Repeatable;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Method;
-import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -184,7 +182,7 @@ public class AnnotationUtils {
      * @param annotationType 注解类型
      * @return 可重复注解
      */
-    private static <A> A[] getRepeatableAnnotationFromContainer(AnnotatedElement element, Class<A> annotationType) {
+    private static <A extends Annotation> A[] getRepeatableAnnotationFromContainer(AnnotatedElement element, Class<A> annotationType) {
         Annotation container = determineRepeatableContainerType(annotationType)
             .map(element::getDeclaredAnnotation)
             .orElse(null);
@@ -206,29 +204,9 @@ public class AnnotationUtils {
             .map(Repeatable::value);
     }
 
-    @SuppressWarnings("unchecked")
     @SneakyThrows
-    public static <A> A[] getAnnotationFromRepeatableContainer(Class<A> annotationType, Annotation container) {
-        // 如果是基于Map合成的注解，则直接获取属性值
-        if (ValueMapAnnotationProxy.isSynthesized(container)) {
-            return (A[])((ValueMapAnnotationProxy)Proxy.getInvocationHandler(container)).getMemberValues().get(VALUE);
-        }
-        // 如果是合成注解，则获取合成属性
-        if (container instanceof MergedAnnotation.SynthesizedAnnotation synthesizedAnnotation) {
-            return (A[]) synthesizedAnnotation.getAttributeValue(VALUE);
-        }
-        // 如果是普通的注解，则通过反射获取其属性值
-        Method valueMethod = ReflectUtils.getMethod(container.annotationType(), VALUE);
-        Asserts.isNotNull(
-            valueMethod, "The repeatable container annotation [{}] of [{}] must have a 'value' method!",
-            annotationType, container.annotationType()
-        );
-        if (Proxy.isProxyClass(container.getClass())) {
-            return (A[]) Proxy.getInvocationHandler(container)
-                .invoke(container, valueMethod, null);
-        }
-        // 无法确认注解类型，则直接通过反射调用其属性方法
-        return ReflectUtils.invokeRaw(container, valueMethod);
+    public static <A extends Annotation> A[] getAnnotationFromRepeatableContainer(Class<A> annotationType, Annotation container) {
+        return RepeatableAnnotationCollector.standard().getRepeatableAnnotations(container, annotationType)
+            .toArray(ArrayUtils.newInstance(annotationType, 0));
     }
-
 }
